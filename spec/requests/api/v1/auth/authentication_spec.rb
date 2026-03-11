@@ -58,6 +58,40 @@ RSpec.describe "Authentication API", type: :request do
           expect(body["errors"]).to have_key("email")
         end
       end
+
+      response "422", "password too short" do
+        let(:payload) do
+          {
+            email: "short-password@example.com",
+            password: "short",
+            password_confirmation: "short"
+          }
+        end
+
+        run_test! do |response|
+          body = JSON.parse(response.body)
+
+          expect(body["error"]).to eq("validation_error")
+          expect(body["errors"]).to have_key("password")
+        end
+      end
+
+      response "422", "password confirmation mismatch" do
+        let(:payload) do
+          {
+            email: "mismatch@example.com",
+            password: "password123",
+            password_confirmation: "password124"
+          }
+        end
+
+        run_test! do |response|
+          body = JSON.parse(response.body)
+
+          expect(body["error"]).to eq("validation_error")
+          expect(body["errors"]).to have_key("password_confirmation")
+        end
+      end
     end
   end
 
@@ -122,6 +156,25 @@ RSpec.describe "Authentication API", type: :request do
           expect(body["error"]).to eq("invalid_credentials")
         end
       end
+
+      response "401", "deleted user" do
+        before do
+          user.update!(deleted_at: Time.current)
+        end
+
+        let(:payload) do
+          {
+            email: "login@example.com",
+            password: "password123"
+          }
+        end
+
+        run_test! do |response|
+          body = JSON.parse(response.body)
+
+          expect(body["error"]).to eq("invalid_credentials")
+        end
+      end
     end
   end
 
@@ -168,6 +221,38 @@ RSpec.describe "Authentication API", type: :request do
 
       response "401", "invalid refresh token" do
         let(:payload) { { refresh_token: "bad-token" } }
+
+        run_test! do |response|
+          body = JSON.parse(response.body)
+
+          expect(body["error"]).to eq("invalid_refresh_token")
+        end
+      end
+
+      response "401", "expired refresh token" do
+        let!(:expired_record) do
+          user.refresh_tokens.create!(
+            token_digest: ::Auth::RefreshTokenIssuer.digest("expired-token"),
+            expires_at: 1.minute.ago
+          )
+        end
+        let(:payload) { { refresh_token: "expired-token" } }
+
+        run_test! do |response|
+          body = JSON.parse(response.body)
+
+          expect(body["error"]).to eq("invalid_refresh_token")
+          expect(expired_record.reload).not_to be_active
+        end
+      end
+
+      response "401", "reused revoked refresh token" do
+        let!(:revoked_result) { ::Auth::RefreshTokenIssuer.issue(user: user, device_name: "iPhone") }
+        let(:payload) { { refresh_token: revoked_result.token } }
+
+        before do
+          ::Auth::RefreshTokenRotator.rotate!(token: revoked_result.token, device_name: "iPhone")
+        end
 
         run_test! do |response|
           body = JSON.parse(response.body)

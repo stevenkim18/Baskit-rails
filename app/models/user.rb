@@ -12,6 +12,7 @@ class User < ApplicationRecord
     format: { with: URI::MailTo::EMAIL_REGEXP },
     uniqueness: { case_sensitive: false, conditions: -> { where(deleted_at: nil) } }
   validates :display_name, length: { maximum: 100 }, allow_blank: true
+  validates :password, length: { minimum: 8 }, if: -> { password.present? }
 
   private
 

@@ -92,6 +92,29 @@ RSpec.describe "Authentication API", type: :request do
           expect(body["errors"]).to have_key("password_confirmation")
         end
       end
+
+      response "422", "record not unique" do
+        let(:payload) do
+          {
+            email: "racing@example.com",
+            password: "password123",
+            password_confirmation: "password123"
+          }
+        end
+
+        before do
+          allow(User).to receive(:create!).and_raise(
+            ActiveRecord::RecordNotUnique.new("PG::UniqueViolation")
+          )
+        end
+
+        run_test! do |response|
+          body = JSON.parse(response.body)
+
+          expect(body["error"]).to eq("validation_error")
+          expect(body["errors"]["email"]).to include("이미 사용 중입니다.")
+        end
+      end
     end
   end
 

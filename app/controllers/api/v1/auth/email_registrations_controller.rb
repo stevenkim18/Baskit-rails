@@ -17,6 +17,13 @@ module Api
           render json: { message: "회원가입이 완료되었습니다." }, status: :created
         rescue ActiveRecord::RecordInvalid => error
           render_validation_error(error.record)
+        rescue ActiveRecord::RecordNotUnique
+          render json: {
+            error: "validation_error",
+            errors: {
+              email: ["이미 사용 중입니다."]
+            }
+          }, status: :unprocessable_entity
         end
 
         private

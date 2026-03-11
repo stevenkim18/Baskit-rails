@@ -21,7 +21,7 @@ module Api
           render json: {
             error: "validation_error",
             errors: {
-              email: ["이미 사용 중입니다."]
+              email: [ "이미 사용 중입니다." ]
             }
           }, status: :unprocessable_entity
         end

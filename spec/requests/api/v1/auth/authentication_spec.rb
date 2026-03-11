@@ -213,7 +213,7 @@ RSpec.describe "Authentication API", type: :request do
           refresh_token: { type: :string },
           device_name: { type: :string, nullable: true }
         },
-        required: ["refresh_token"]
+        required: [ "refresh_token" ]
       }
 
       let!(:user) do
@@ -291,7 +291,7 @@ RSpec.describe "Authentication API", type: :request do
       tags "Auth"
       consumes "application/json"
       produces "application/json"
-      security [bearerAuth: []]
+      security [ bearerAuth: [] ]
 
       parameter name: :Authorization, in: :header, type: :string, required: true
       parameter name: :payload, in: :body, schema: {

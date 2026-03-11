@@ -16,7 +16,7 @@ class Rack::Attack
     [
       429,
       { "Content-Type" => "application/json" },
-      [{ error: "rate_limited", message: "Too many requests. Please try again later." }.to_json]
+      [ { error: "rate_limited", message: "Too many requests. Please try again later." }.to_json ]
     ]
   end
 end

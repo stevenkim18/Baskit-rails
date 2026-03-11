@@ -271,6 +271,12 @@ RSpec.describe "Authentication API", type: :request do
       security [bearerAuth: []]
 
       parameter name: :Authorization, in: :header, type: :string, required: true
+      parameter name: :payload, in: :body, schema: {
+        type: :object,
+        properties: {
+          refresh_token: { type: :string, nullable: true }
+        }
+      }
 
       let!(:user) do
         User.create!(
@@ -284,6 +290,7 @@ RSpec.describe "Authentication API", type: :request do
 
       response "204", "no content" do
         let(:Authorization) { "Bearer #{::Auth::AccessToken.issue(user: user)}" }
+        let(:payload) { {} }
 
         run_test! do |_response|
           expect(user.refresh_tokens.where(revoked_at: nil)).to be_empty
@@ -292,10 +299,31 @@ RSpec.describe "Authentication API", type: :request do
 
       response "401", "unauthorized" do
         let(:Authorization) { "Bearer bad-token" }
+        let(:payload) { {} }
 
         run_test! do |response|
           body = JSON.parse(response.body)
 
+          expect(body["error"]).to eq("unauthorized")
+        end
+      end
+
+      response "401", "refresh token owned by another user" do
+        let!(:other_user) do
+          User.create!(
+            email: "other-user@example.com",
+            password: "password123",
+            password_confirmation: "password123"
+          )
+        end
+        let!(:other_refresh_token) { ::Auth::RefreshTokenIssuer.issue(user: other_user, device_name: "Other iPhone") }
+        let(:Authorization) { "Bearer #{::Auth::AccessToken.issue(user: user)}" }
+        let(:payload) { { refresh_token: other_refresh_token.token } }
+
+        run_test! do |response|
+          body = JSON.parse(response.body)
+
+          expect(response).to have_http_status(:unauthorized)
           expect(body["error"]).to eq("unauthorized")
         end
       end

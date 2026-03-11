@@ -7,6 +7,7 @@ module Api
         def destroy
           if params[:refresh_token].present?
             revoke_one_token!
+            return if performed?
           else
             current_user.refresh_tokens.where(revoked_at: nil).update_all(revoked_at: Time.current, updated_at: Time.current)
           end

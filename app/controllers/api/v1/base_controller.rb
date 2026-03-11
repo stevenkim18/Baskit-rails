@@ -1,7 +1,7 @@
 module Api
   module V1
     class BaseController < ApplicationController
-      rescue_from Auth::AccessToken::InvalidToken, with: :render_unauthorized
+      rescue_from ::Auth::AccessToken::InvalidToken, with: :render_unauthorized
 
       private
 
@@ -15,7 +15,7 @@ module Api
         token = bearer_token
         return @current_user = nil if token.blank?
 
-        payload = Auth::AccessToken.decode(token)
+        payload = ::Auth::AccessToken.decode(token)
         @current_user = User.find_by(id: payload[:user_id], deleted_at: nil)
       end
 
@@ -32,6 +32,13 @@ module Api
           error: "unauthorized",
           message: "Authentication is required."
         }, status: :unauthorized
+      end
+
+      def render_validation_error(record)
+        render json: {
+          error: "validation_error",
+          errors: record.errors.to_hash(true)
+        }, status: :unprocessable_entity
       end
     end
   end
